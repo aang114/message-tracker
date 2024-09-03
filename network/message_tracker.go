@@ -20,7 +20,9 @@ type MessageTracker interface {
 // ErrMessageNotFound is an error returned by MessageTracker when a message with specified id is not found
 var ErrMessageNotFound = errors.New("message not found")
 
+// ErrInvalidMessage is an error returned by MessageTracker when the specified message is invalid
+var ErrInvalidMessage = errors.New("message is invalid")
+
 func NewMessageTracker(length int) MessageTracker {
-	// TODO: Implement this constructor with your implementation of the MessageTracker interface
-	return nil
+	return newTracker(length)
 }

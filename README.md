@@ -36,16 +36,16 @@ A doubly linked list (where a node's value is `*Message`) and a hash map (that m
 
 To prevent data races, a read-write mutex is used. A read-write mutex was used rather than a normal mutex to allow concurrent reading.
 
-Since performance is critical, a doubly linked list was chosen instead of alternatives (such as Go slices) since it has a better time complexity for the addition, deletion and get operations. Furthermore, it has the same time complexity as alternatives such as Go slices for retrieving all messages (although it may be slower in practice). However, since I assumed that the first 3 operations would require greater performance and would be called more often, a doubly linked list was chosen.
+Since performance is critical, a doubly linked list was chosen instead of alternatives (such as Go slices) since it has a better time complexity for the addition, deletion and get operations. Furthermore, it has the same time complexity as alternatives such as Go slices for the retrieve-all operation (although it may be slower in practice). However, since I assumed that the first 3 operations would require faster performance and would be called more often, a doubly linked list was chosen.
 
 ### Addition, Deletion and Get
 
-The combination of the two data structures allows `MessageTracker.Add()`, `MessageTracker.Delete()` and `MessageTracker.Message()` to be performed in constant time complexity (i.e O(1)) - which is ideal for performance. However, using two data structures requires more memory usage.
+The combination of a doubly linked list and a hash map allows `MessageTracker.Add()`, `MessageTracker.Delete()` and `MessageTracker.Message()` to be performed in constant time complexity (i.e O(1)) - which is ideal for performance. However, using two data structures requires more memory usage.
 
 If a Go Slice were used with a hash map instead, this would result in a linear time complexity of O(n) for `MessageTracker.Add()` and `MessageTracker.Delete()`. This is because `MessageTracker.Add()` may result in a reallocation if the capacity of the Go Slice is exceeded and `MessageTracker.Delete()` may result in other elements getting shifted.
 
 ### Retrieving all Messages
 
-`MessageTracker.Messages()` is performed in linear complexity (i.e O(n)) since the doubly linked list is traversed. This is the same time complexity as a Go Slice.
+`MessageTracker.Messages()` is performed in linear complexity (i.e O(n)) since the doubly linked list is traversed. This is the same time complexity if a Go Slice was used instead.
 
-In practice, a Go Slice may be faster since its elements are stored in a contiguous block of memory. Furthermore, since the return type is a slice, the doubly linked list implementation requires the elements to be copied to a newly created slice which would also increase its time taken.
+In practice, a Go Slice may be faster since its elements are stored in a contiguous block of memory. Furthermore, since the return type is a slice, the doubly linked list implementation requires the elements to be copied to a newly created slice every time the function is called - which increase its time taken and requires more memory usage.

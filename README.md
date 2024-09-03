@@ -17,7 +17,7 @@ type MessageTracker interface {
 }
 ```
 
-The `Message` type that is found in `network/message.go`.
+The `Message` type is found in `network/message.go`:
 
 ```go 
 // Message is received from peers in a p2p network.

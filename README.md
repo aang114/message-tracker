@@ -36,7 +36,7 @@ A doubly linked list (where a node's value is `*Message`) and a hash map (that m
 
 To prevent data races, a read-write mutex is used. A read-write mutex was used rather than a normal mutex to allow concurrent reading.
 
-Since performance is critical, a doubly linked list was chosen instead of alternatives (such as Go slices) since it has a better time complexity for the addition, deletion and get operations. Furthermore, it has the same time complexity as alternatives such as Go slices for retrieving all messages - although it may be slower in practice. However, since I assumed that the first 3 operations would require greater performance and would be called more often, a doubly linked list was chosen.
+Since performance is critical, a doubly linked list was chosen instead of alternatives (such as Go slices) since it has a better time complexity for the addition, deletion and get operations. Furthermore, it has the same time complexity as alternatives such as Go slices for retrieving all messages (although it may be slower in practice). However, since I assumed that the first 3 operations would require greater performance and would be called more often, a doubly linked list was chosen.
 
 ### Addition, Deletion and Get
 

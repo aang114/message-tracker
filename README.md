@@ -1,55 +1,21 @@
-# Go Interview - Gossamer
+# Message Tracker
 
-## Task Description
+## Implementation
 
-Implement a peer-to-peer (p2p) message tracker. There is a `Message` type that is found in `network/message.go`.  
-```go 
-// Message is received from peers in a p2p network.
-type Message struct {
-	ID     string
-	PeerID string
-	Data   []byte
-}
-```
-Each message is uniquely identified by the `Message.ID`. Messages with the same ID may be received by multiple peers.  Peers are uniquely identified by their own ID stored in `Message.PeerID`. 
+A doubly linked list (where a node's value is `*Message`) and a hash map (that maps a message ID to the message's doubly linked list node) were used to store the messages. If the maximum length is about to be exceeded after an addition, the earliest element gets removed.
 
-The interface for the message tracker is defined in `network/message_tracker.go`.  
-```go 
-// MessageTracker tracks a configurable fixed amount of messages.
-// Messages are stored first-in-first-out.  Duplicate messages should not be stored in the queue.
-type MessageTracker interface {
-	// Add will add a message to the tracker
-	Add(message *Message) (err error)
-	// Delete will delete message from tracker
-	Delete(id string) (err error)
-	// Get returns a message for a given ID.  Message is retained in tracker
-	Message(id string) (message *Message, err error)
-	// All returns messages in the order in which they were received
-	Messages() (messages []*Message)
-}
-```
+To prevent data races, a read-write mutex is used. A read-write mutex was used rather than a normal mutex to allow concurrent reading.
 
-There is an exported constructor `network.NewMessageTracker(length int)` which accepts a length parameter.  This parameter should be used to constrain the number of messages in your implementation.
+Since performance is critical, a doubly linked list was chosen instead of alternatives (such as Go slices) since it has a better time complexity for the addition, deletion and get operations. Furthermore, it has the same time complexity as alternatives such as Go slices for retrieving all messages - although it may be slower in practice. However, since I assumed that the first 3 operations would require greater performance and would be called more often, a doubly linked list was chosen.
 
-There are some tests within the `network_test` package found in `network/message_tracker_test.go` which call the `network.NewMessageTracker` and test the functionality from outside the `network` package.
+### Addition, Deletion and Get
 
-There are a few key points to take into account when implementing this tracker:
+The combination of the two data structures allows `MessageTracker.Add()`, `MessageTracker.Delete()` and `MessageTracker.Message()` to be performed in constant time complexity (i.e O(1)) - which is ideal for performance. However, using two data structures requires more memory usage.
 
-- The tracker is meant to be a hot path in our program so performance is critical.
-- Duplicate messages based on `Message.ID` should only be returned by `MessageTracker.All()` once.
-- The tracker should only hold a configurable maximum amount of messages so it does not grow in size indefinitely.
+If a Go Slice were used with a hash map instead, this would result in a linear time complexity of O(n) for `MessageTracker.Add()` and `MessageTracker.Delete()`. This is because `MessageTracker.Add()` may result in a reallocation if the capacity of the Go Slice is exceeded and `MessageTracker.Delete()` may result in other elements getting shifted.
 
-## Submission Criteria
-- Implement the `MessageTracker` interface, and ensure tests in `network/message_tracker_test.go` pass.
-- Write unit tests for your `MessageTracker` implementation and obtain 70%+ code coverage.
-- BONUS: Write benchmarks for your tracker implementation.
-- BONUS: Write a design document that describes your implementation and the technical choices that you made.
+### Retrieving all Messages
 
-## Submission
+`MessageTracker.Messages()` is performed in linear complexity (i.e O(n)) since the doubly linked list is traversed. This is the same time complexity as a Go Slice.
 
-You must use `git` to track your changes.
-
-You can either submit us:
-
-- a URL to your Git repository
-- a zip file containing your Git repository
+In practice, a Go Slice may be faster since its elements are stored in a contiguous block of memory. Furthermore, since the return type is a slice, the doubly linked list implementation requires the elements to be copied to a newly created slice which would also increase its time taken.

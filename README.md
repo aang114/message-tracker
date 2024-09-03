@@ -1,5 +1,35 @@
 # Message Tracker
 
+This repository contains an implementation of the message tracker interface `MessageTracker` defined in `network/message_tracker.go`:
+
+```go 
+// MessageTracker tracks a **configurable fixed amount of messages**.
+// Messages are stored **first-in-first-out**.  **Duplicate messages** should **not** be stored in the **queue**.
+type MessageTracker interface {
+	// Add will add a message to the tracker
+	Add(message *Message) (err error)
+	// Delete will delete message from tracker
+	Delete(id string) (err error)
+	// Get returns a message for a given ID.  Message is retained in tracker
+	Message(id string) (message *Message, err error)
+	// All returns messages **in the order** in which they were received
+	Messages() (messages []*Message)
+}
+```
+
+The `Message` type that is found in `network/message.go`.
+
+```go 
+// Message is received from peers in a p2p network.
+type Message struct {
+	ID     string
+	PeerID string
+	Data   []byte
+}
+```
+
+Each message is uniquely identified by the `Message.ID`. Messages with the same ID may be received by multiple peers. Peers are uniquely identified by their own ID stored in `Message.PeerID`.
+
 ## Implementation
 
 A doubly linked list (where a node's value is `*Message`) and a hash map (that maps a message ID to the message's doubly linked list node) were used to store the messages. If the maximum length is about to be exceeded after an addition, the earliest element gets removed.

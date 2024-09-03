@@ -2,10 +2,11 @@ package network_test
 
 import (
 	"fmt"
-	"testing"
-
 	"github.com/ChainSafe/gossamer-go-interview/network"
 	"github.com/stretchr/testify/assert"
+	"slices"
+	"sync"
+	"testing"
 )
 
 func generateMessage(n int) *network.Message {
@@ -17,6 +18,24 @@ func generateMessage(n int) *network.Message {
 }
 
 func TestMessageTracker_Add(t *testing.T) {
+	t.Run("add nil message", func(t *testing.T) {
+		length := 5
+		mt := network.NewMessageTracker(length)
+
+		err := mt.Add(nil)
+		assert.ErrorIs(t, err, network.ErrInvalidMessage)
+	})
+
+	t.Run("add message with empty ID string", func(t *testing.T) {
+		length := 5
+		mt := network.NewMessageTracker(length)
+		msg := generateMessage(0)
+		msg.ID = ""
+
+		err := mt.Add(msg)
+		assert.ErrorIs(t, err, network.ErrInvalidMessage)
+	})
+
 	t.Run("add, get, then all messages", func(t *testing.T) {
 		length := 5
 		mt := network.NewMessageTracker(length)
@@ -120,6 +139,64 @@ func TestMessageTracker_Add(t *testing.T) {
 			generateMessage(3),
 		}, msgs)
 	})
+
+}
+
+func TestMessageTracker_AddConcurrently(t *testing.T) {
+	t.Run("concurrently add, get, then all messages", func(t *testing.T) {
+		var wg sync.WaitGroup
+		length := 1000
+		mt := network.NewMessageTracker(length)
+
+		for i := 0; i < length; i++ {
+			wg.Add(1)
+
+			go func(i int) {
+				defer wg.Done()
+
+				msg := generateMessage(i)
+				err := mt.Add(msg)
+				assert.NoError(t, err)
+
+				retrievedMessage, err := mt.Message(msg.ID)
+				assert.NoError(t, err)
+				assert.NotNil(t, msg, retrievedMessage)
+			}(i)
+		}
+		wg.Wait()
+
+		msgs := mt.Messages()
+		assert.Len(t, msgs, length)
+		for i := 0; i < length; i++ {
+			msg := generateMessage(i)
+			slices.Contains(msgs, msg)
+		}
+	})
+
+	t.Run("concurrently add, delete, then all messages", func(t *testing.T) {
+		var wg sync.WaitGroup
+		length := 1000
+		mt := network.NewMessageTracker(length)
+
+		for i := 0; i < length; i++ {
+			wg.Add(1)
+
+			go func(i int) {
+				defer wg.Done()
+
+				msg := generateMessage(i)
+				err := mt.Add(msg)
+				assert.NoError(t, err)
+
+				err = mt.Delete(msg.ID)
+				assert.NoError(t, err)
+			}(i)
+		}
+		wg.Wait()
+
+		msgs := mt.Messages()
+		assert.Empty(t, msgs)
+	})
 }
 
 func TestMessageTracker_Cleanup(t *testing.T) {
@@ -183,5 +260,14 @@ func TestMessageTracker_Message(t *testing.T) {
 		msg, err := mt.Message("bleh")
 		assert.ErrorIs(t, err, network.ErrMessageNotFound)
 		assert.Nil(t, msg)
+	})
+}
+
+func TestMessageTracker_Messages(t *testing.T) {
+	t.Run("empty tracker", func(t *testing.T) {
+		length := 5
+		mt := network.NewMessageTracker(length)
+		messages := mt.Messages()
+		assert.Empty(t, messages)
 	})
 }
